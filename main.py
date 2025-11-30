@@ -7,7 +7,7 @@ import random
 import altair as alt
 
 color_list=['blue','red','yellow','green','black','white']
-cam_list=['front', 'rear', 'left', 'right']
+cam_list=['front', 'rear', 'left', 'right', 'dms', 'dd']
 bin_type_list=['video-1','video-2']
 
 def make_dataset():
@@ -22,24 +22,11 @@ def make_dataset():
 
   return df
 
-if __name__ == '__main__':
-  st.markdown('markdown test :material/search:')
-  st.success('success test :material/Search:')
-  st.warning('success test :material/Open_With:')
+def gen_tab1(df):
+  with st.container(border=True):
+    st.line_chart(df, x='no', y=['duration','size'])
 
-  #selected_columns = st.multiselect('please select', df.columns[1:])
-  #st.line_chart(df.set_index('x')[selected_columns])
-
-
-  if 'dataset' not in st.session_state:
-    st.session_state['dataset'] = make_dataset()
-  df = st.session_state['dataset']
-  #chart = (alt.Chart(df).mark_line().encode(x='no', y='duration'))
-  #st.altair_chart(chart)
-
-  st.line_chart(df, x='no', y=['duration','size'])
-
-
+def gen_tab2(df):
   l = df['color'].unique()
   l = ['all', 'yellow', 'black']
   sel = st.selectbox('camera', l)
@@ -63,6 +50,48 @@ if __name__ == '__main__':
   filtered_df = filtered_df[filtered_df['cam'].isin(mul)]
 
   event = st.dataframe(filtered_df, hide_index=True, selection_mode=['single-row', 'single-column'])
+
+
+if __name__ == '__main__':
+  st.markdown('markdown test :material/search:')
+  st.success('success test :material/Search:')
+  st.warning('success test :material/Open_With:')
+
+  #selected_columns = st.multiselect('please select', df.columns[1:])
+  #st.line_chart(df.set_index('x')[selected_columns])
+
+
+  if 'dataset' not in st.session_state:
+    st.session_state['dataset'] = make_dataset()
+  df = st.session_state['dataset']
+  #chart = (alt.Chart(df).mark_line().encode(x='no', y='duration'))
+  #st.altair_chart(chart)
+
+  tab1, tab2 = st.tabs(['graph', 'table'])
+
+  with tab1:
+    st.header('graph')
+    gen_tab1(df)
+
+  with tab2:
+    st.header('table')
+    gen_tab2(df)
+
+
+  """
+  with st.container(border=True):
+    st.vega_lite_chart(
+      df,
+      {
+      'mark': {'type': 'line', 'tooltip': True},
+      'encoding': {
+        'x' : {'field': 'no', 'type': 'quantitative'},
+        'y' : {'field': 'duration', 'type': 'quantitative'},
+        },
+        },
+        width='stretch',
+        )
+  """
 
 
 
