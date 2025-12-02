@@ -1,97 +1,89 @@
 #!/usr/bin/env python3
 
 import streamlit as st
+import scipy
+from scipy import stats
 import numpy as np
 import pandas as pd
 import random
 import altair as alt
 
-color_list=['blue','red','yellow','green','black','white']
-cam_list=['front', 'rear', 'left', 'right', 'dms', 'dd']
-bin_type_list=['video-1','video-2']
+type_mark_list = {
+  'Grass': ':material/grass:',
+  'Fire': ':material/mode_heat:',
+  'Water': ':material/water_drop:',
+  'Bug': ':material/bug_report:',
+  'Poison': ':material/Skull:',
+  'Electric': ':material/electric_bolt:',
+  'Ice': ':material/ac_unit:',
+}
+
+def type1_pill_conv(sel):
+  if sel in type_mark_list:
+    mark = type_mark_list[sel]
+    return f'{sel}{mark}'
+  else:
+    return sel
 
 def make_dataset():
-  df = pd.DataFrame()
-
-  df['no'] = range(1,501,1)
-  df['color'] = random.choices(color_list,k=500)
-  df['cam'] = random.choices(cam_list,k=500)
-  df['bin_type'] = random.choices(bin_type_list,k=500)
-  df['duration'] = np.random.randn(500)
-  df['size'] = np.random.randn(500)
-
+  df = pd.read_csv('./csv/pokemon/Pokemon.csv')
   return df
 
-def gen_tab1(df):
+def tab_graph(df):
+  std = stats.tstd(df[df['Type 1'] == 'Grass']['HP'])
+  mean = scipy.mean(df[df['Type 1'] == 'Grass']['HP'])
+  st.write(std)
+
+  x_min = mean - (4*std)
+  x_max = mean + (4*std)
+
+  x_data = np.arange(x_min, x_max, 0.1)
+  #y_data = [stats.norm.pdf(i, loc=mean, scale=std) for i in range(x_min,x_max)]
+  y_data = stats.norm.pdf(x_data, loc=mean, scale=std)
+  std_mean = pd.DataFrame(
+  {
+  'x':x_data,
+  'y':y_data
+  },
+  )
+  
   with st.container(border=True):
-    st.line_chart(df, x='no', y=['duration','size'])
+    st.line_chart(std_mean, x='x', y='y')
+  
 
-def gen_tab2(df):
-  l = df['color'].unique()
-  l = ['all', 'yellow', 'black']
-  sel = st.selectbox('camera', l)
+def tab_table(df):
+ 
+  type_list = df['Type 1'].unique()
 
-  if sel != 'all':
-    filtered_df = df[df['color'] == sel]
-  else:
-    filtered_df = df
+  filtered_df = df
 
-  #name = st.text_input('please input')
-  #if (name) and (name != 'all'):
-  #  df = df[df['cam'].str.contains(name)]
+  pill = st.pills('Type 1', type_list, selection_mode='multi', format_func=type1_pill_conv)
+  #pill = st.multiselect('Type 1', type_list)
+  filtered_df = filtered_df[filtered_df['Type 1'].isin(pill)]
 
-  pill = st.pills('pill', color_list, default=color_list, selection_mode='multi')
-  filtered_df = filtered_df[filtered_df['color'].isin(pill)]
+  mean_button = st.toggle('mean')
+  if mean_button == True:
+    filtered_df = filtered_df.groupby('Type 1')['HP'].mean().reset_index()
 
-  seg = st.segmented_control('seg', bin_type_list, default=bin_type_list, selection_mode='multi')
-  filtered_df = filtered_df[filtered_df['bin_type'].isin(seg)]
-
-  mul = st.multiselect('multiselect', cam_list, default=cam_list)
-  filtered_df = filtered_df[filtered_df['cam'].isin(mul)]
-
-  event = st.dataframe(filtered_df, hide_index=True, selection_mode=['single-row', 'single-column'])
+  st.dataframe(filtered_df, hide_index=True, selection_mode=['single-row', 'single-column'])
+  if mean_button == True:
+    st.bar_chart(filtered_df,x='Type 1',y='HP',color=['#87ceeb'])
 
 
 if __name__ == '__main__':
-  st.markdown('markdown test :material/search:')
-  st.success('success test :material/Search:')
-  st.warning('success test :material/Open_With:')
-
-  #selected_columns = st.multiselect('please select', df.columns[1:])
-  #st.line_chart(df.set_index('x')[selected_columns])
-
-
   if 'dataset' not in st.session_state:
     st.session_state['dataset'] = make_dataset()
   df = st.session_state['dataset']
-  #chart = (alt.Chart(df).mark_line().encode(x='no', y='duration'))
-  #st.altair_chart(chart)
 
-  tab1, tab2 = st.tabs(['graph', 'table'])
+  tab1, tab2 = st.tabs(['table_tab', 'grach_tab'])
 
   with tab1:
-    st.header('graph')
-    gen_tab1(df)
+    st.header('table')
+    tab_table(df)
 
   with tab2:
-    st.header('table')
-    gen_tab2(df)
-
-
-  """
-  with st.container(border=True):
-    st.vega_lite_chart(
-      df,
-      {
-      'mark': {'type': 'line', 'tooltip': True},
-      'encoding': {
-        'x' : {'field': 'no', 'type': 'quantitative'},
-        'y' : {'field': 'duration', 'type': 'quantitative'},
-        },
-        },
-        width='stretch',
-        )
-  """
+    st.header('graph')
+    tab_graph(df)
 
 
 
